@@ -1,0 +1,350 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap');
+
+/* ── Khaki Command Palette ─────────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg-primary:    #f0ebe0;   /* warm off-white / khaki base         */
+  --bg-secondary:  #e8e2d5;   /* slightly deeper panel background    */
+  --bg-panel:      #faf7f2;   /* card surface — near white           */
+
+  /* Header */
+  --navy:          #1a2744;   /* police navy                         */
+  --navy-dark:     #111c36;   /* darker navy for depth               */
+  --navy-mid:      #253460;   /* mid navy for accents on header      */
+
+  /* Accent / status colors */
+  --accent-navy:   #1a2744;   /* primary interactive color           */
+  --accent-gold:   #c8960c;   /* authority gold                      */
+  --accent-green:  #1e7e34;   /* operational green                   */
+  --accent-amber:  #d97706;   /* caution amber                       */
+  --accent-red:    #b91c1c;   /* alert red                           */
+
+  /* Signal lamp colors — vivid, unaffected by light theme */
+  --signal-red:    #ff0000;
+  --signal-amber:  #ffaa00;
+  --signal-green:  #00e000;
+
+  /* Congestion badge colors */
+  --congestion-low:      #15803d;
+  --congestion-medium:   #b45309;
+  --congestion-high:     #c2410c;
+  --congestion-critical: #991b1b;
+
+  /* Text */
+  --text-primary:  #1c1917;   /* near-black on off-white             */
+  --text-secondary:#3d3527;   /* warm dark brown                     */
+  --text-muted:    #78716c;   /* stone-gray muted                    */
+  --text-on-navy:  #e8edf8;   /* light text on dark navy             */
+  --text-on-navy-muted: #8fa0c8;
+
+  /* Borders */
+  --border-default: rgba(28, 25, 23, 0.12);
+  --border-accent:  rgba(26, 39, 68, 0.25);
+
+  /* Card top-border accents */
+  --card-accent-signal:  #1a2744;   /* navy — signal status card    */
+  --card-accent-input:   #c8960c;   /* gold — vehicle input card    */
+  --card-accent-result:  #1e7e34;   /* green — optimization results */
+  --card-accent-low:     #15803d;
+  --card-accent-medium:  #b45309;
+  --card-accent-high:    #c2410c;
+  --card-accent-critical:#991b1b;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg-primary);
+  font-family: 'Rajdhani', sans-serif;
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Subtle diagonal texture on body */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(26, 39, 68, 0.025) 0px,
+      rgba(26, 39, 68, 0.025) 1px,
+      transparent 1px,
+      transparent 10px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Panel / card base ─────────────────────────────────────────────────────── */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(26, 39, 68, 0.08), 0 1px 2px rgba(26, 39, 68, 0.06);
+}
+
+/* Top-border accent variants */
+.panel-signal  { border-top: 3px solid var(--card-accent-signal);  }
+.panel-input   { border-top: 3px solid var(--card-accent-input);   }
+.panel-result  { border-top: 3px solid var(--card-accent-result);  }
+
+/* ── Keyframe animations ───────────────────────────────────────────────────── */
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(2.5); opacity: 0;   }
+}
+
+@keyframes countdown-tick {
+  0%   { transform: scale(1);    }
+  50%  { transform: scale(1.06); }
+  100% { transform: scale(1);    }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(80px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+@keyframes navy-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(26,39,68,0.2); }
+  50%       { box-shadow: 0 0 0 6px rgba(26,39,68,0); }
+}
+
+.animate-pulse-ring  { animation: pulse-ring 2s infinite; }
+.animate-countdown   { animation: countdown-tick 1s ease infinite; }
+.animate-fade-in     { animation: fade-in 0.3s ease-out; }
+.animate-slide-in    { animation: slide-in 0.3s ease-out; }
+
+/* ── Signal housing ────────────────────────────────────────────────────────── */
+.signal-housing {
+  background: linear-gradient(180deg, #1c1c1c 0%, #111111 100%);
+  border: 2px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.signal-light {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid #1a1a1a;
+  transition: all 0.3s ease;
+}
+
+.signal-light.inactive {
+  background: #1a1a1a;
+  box-shadow: inset 0 0 10px #000;
+}
+
+.signal-light.red-active {
+  background: radial-gradient(circle at 35% 35%, #ff4444, #ff0000, #660000);
+  box-shadow: 0 0 20px #ff0000, 0 0 40px rgba(255, 0, 0, 0.5);
+}
+
+.signal-light.amber-active {
+  background: radial-gradient(circle at 35% 35%, #ffcc44, #ffaa00, #664400);
+  box-shadow: 0 0 20px #ffaa00, 0 0 40px rgba(255, 170, 0, 0.5);
+}
+
+.signal-light.green-active {
+  background: radial-gradient(circle at 35% 35%, #44ff88, #00e000, #005500);
+  box-shadow: 0 0 20px #00e000, 0 0 40px rgba(0, 224, 0, 0.5);
+}
+
+/* ── Vehicle count input ───────────────────────────────────────────────────── */
+.vehicle-input {
+  background: #fff;
+  border: 1px solid var(--border-accent);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  width: 80px;
+  text-align: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.vehicle-input:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(26, 39, 68, 0.15);
+}
+
+/* ── Direction tab buttons ─────────────────────────────────────────────────── */
+.tab-btn {
+  background: #fff;
+  border: 1px solid var(--border-accent);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 7px 18px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-weight: 600;
+}
+
+.tab-btn:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+  background: rgba(26, 39, 68, 0.05);
+}
+
+.tab-btn.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--text-on-navy);
+  box-shadow: 0 2px 6px rgba(26, 39, 68, 0.3);
+}
+
+/* ── Optimize CTA button ───────────────────────────────────────────────────── */
+.btn-optimize {
+  background: var(--navy);
+  border: 2px solid var(--navy);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 13px 40px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  box-shadow: 0 3px 10px rgba(26, 39, 68, 0.3);
+}
+
+.btn-optimize:hover {
+  background: var(--navy-dark);
+  border-color: var(--navy-dark);
+  box-shadow: 0 6px 20px rgba(26, 39, 68, 0.45);
+  transform: translateY(-2px);
+}
+
+.btn-optimize:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(26, 39, 68, 0.3);
+}
+
+/* ── Density bar ───────────────────────────────────────────────────────────── */
+.density-bar-container {
+  width: 100%;
+  height: 8px;
+  background: rgba(26, 39, 68, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(26, 39, 68, 0.12);
+}
+
+.density-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* ── Toast ─────────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--navy);
+  border-left: 4px solid var(--accent-green);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(26, 39, 68, 0.4);
+  z-index: 9999;
+  animation: slide-in 0.3s ease-out;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb {
+  background: rgba(26, 39, 68, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(26, 39, 68, 0.55); }
+
+/* ── Leaflet overrides for light-theme map ─────────────────────────────────── */
+.leaflet-container {
+  background: #d6cfbe !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--bg-panel) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-default) !important;
+  border-top: 3px solid var(--navy) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 16px rgba(26, 39, 68, 0.18) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--bg-panel) !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--bg-panel) !important;
+  color: var(--navy) !important;
+  border-color: var(--border-accent) !important;
+}
+
+/* ── Utility helpers ───────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border-default);
+  margin: 8px 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.badge-low      { background: rgba(21,128,61,0.12);  color: var(--congestion-low);      border: 1px solid rgba(21,128,61,0.3);  }
+.badge-medium   { background: rgba(180,83,9,0.12);   color: var(--congestion-medium);   border: 1px solid rgba(180,83,9,0.3);  }
+.badge-high     { background: rgba(194,65,12,0.12);  color: var(--congestion-high);     border: 1px solid rgba(194,65,12,0.3); }
+.badge-critical { background: rgba(153,27,27,0.12);  color: var(--congestion-critical); border: 1px solid rgba(153,27,27,0.3); }

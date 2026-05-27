@@ -1,0 +1,79 @@
+.signal-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.signal-direction-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #00f5ff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+}
+
+.signal-road-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.7rem;
+  color: #6b82a8;
+  text-align: center;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signal-countdown {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px currentColor;
+  animation: countdown-tick 1s ease infinite;
+}
+
+.signal-status-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.signal-countdown.green-phase {
+  color: #00ff00;
+}
+
+.signal-countdown.amber-phase {
+  color: #ffaa00;
+}
+
+.signal-countdown.red-phase {
+  color: #ff0000;
+}
+
+.signal-status-label.green-phase {
+  color: #00ff00;
+}
+
+.signal-status-label.amber-phase {
+  color: #ffaa00;
+}
+
+.signal-status-label.red-phase {
+  color: #ff0000;
+}
+
+.signal-active-glow {
+  position: relative;
+}
+
+.signal-active-glow::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  animation: pulse-ring 2s infinite;
+}
