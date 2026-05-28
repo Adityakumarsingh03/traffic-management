@@ -72,7 +72,7 @@ async function seed(): Promise<void> {
           insertTimer.run({
             junction_id: junction.id,
             direction: dir,
-            green_time: 30,
+            green_time: 25,
             red_time: 90,
             yellow_time: 5,
             updated_at: new Date().toISOString(),

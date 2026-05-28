@@ -31,10 +31,6 @@ const PCU_WEIGHTS: Record<keyof VehicleCounts, number> = {
 };
 
 const ROAD_CAPACITY = 50;
-const YELLOW_TIME = 5;
-const MIN_GREEN = 10;
-const MAX_GREEN = 120;
-const DEFAULT_GREEN = 30;
 
 export function calculatePCU(vehicles: VehicleCounts): number {
   return (
@@ -61,42 +57,58 @@ export function getCongestionLevel(density: number): 'low' | 'medium' | 'high' |
 }
 
 export function calculateAdaptiveTimers(roadsData: RoadData[]): TimerResult[] {
-  const pcuPerRoad = roadsData.map((road) => ({
-    direction: road.direction,
-    pcu: calculatePCU(road.vehicles),
-  }));
+  // Fixed 120-second total cycle: 4 × (green + 5s yellow) = 120s
+  const TOTAL_CYCLE   = 120;
+  const YELLOW_TIME   = 5;
+  const NUM_DIR       = 4;
+  const AVAIL_GREEN   = TOTAL_CYCLE - NUM_DIR * YELLOW_TIME; // 100 seconds
+  const MIN_GREEN     = 10;
+  // MAX per direction = leave at least MIN_GREEN for each of the other 3
+  const MAX_GREEN     = AVAIL_GREEN - MIN_GREEN * (NUM_DIR - 1); // 70 seconds
 
-  const totalPcu = pcuPerRoad.reduce((sum, r) => sum + r.pcu, 0);
+  const pcuValues = roadsData.map((road) => calculatePCU(road.vehicles));
+  const totalPCU  = pcuValues.reduce((sum, p) => sum + p, 0);
 
-  // Webster-style proportional allocation:
-  // Each direction gets a share of MAX_GREEN proportional to its PCU contribution.
-  // This naturally gives MAX_GREEN (120) to a road with 100% of total traffic.
-  const timers: TimerResult[] = pcuPerRoad.map(({ direction, pcu }) => {
-    let greenTime: number;
+  let greenTimes: number[];
 
-    if (totalPcu === 0) {
-      greenTime = DEFAULT_GREEN;
-    } else {
-      greenTime = Math.round((pcu / totalPcu) * MAX_GREEN);
+  if (totalPCU < 0.1) {
+    // All zero — equal share: floor(100/4) = 25s each
+    const equal = Math.floor(AVAIL_GREEN / NUM_DIR);
+    greenTimes = roadsData.map(() => equal);
+  } else {
+    // Proportional allocation, clamped to [MIN_GREEN, MAX_GREEN]
+    greenTimes = pcuValues.map((pcu) => {
+      const proportional = (pcu / totalPCU) * AVAIL_GREEN;
+      return Math.max(MIN_GREEN, Math.min(MAX_GREEN, Math.round(proportional)));
+    });
+
+    // Adjust so the sum equals AVAIL_GREEN exactly (fix rounding drift)
+    let diff       = AVAIL_GREEN - greenTimes.reduce((s, t) => s + t, 0);
+    let iterations = 0;
+
+    while (diff !== 0 && iterations < 200) {
+      if (diff > 0) {
+        // Need to add — give to the busiest direction that is still under MAX_GREEN
+        const idx = greenTimes.reduce((best, _t, i) =>
+          (pcuValues[i] > pcuValues[best] && greenTimes[i] < MAX_GREEN) ? i : best, 0);
+        greenTimes[idx] = Math.min(MAX_GREEN, greenTimes[idx] + 1);
+        diff--;
+      } else {
+        // Need to remove — take from the least-busy direction still above MIN_GREEN
+        const idx = greenTimes.reduce((best, _t, i) =>
+          (pcuValues[i] < pcuValues[best] && greenTimes[i] > MIN_GREEN) ? i : best, 0);
+        greenTimes[idx] = Math.max(MIN_GREEN, greenTimes[idx] - 1);
+        diff++;
+      }
+      iterations++;
     }
-
-    greenTime = Math.min(MAX_GREEN, Math.max(MIN_GREEN, greenTime));
-
-    return {
-      direction,
-      green_time: greenTime,
-      yellow_time: YELLOW_TIME,
-      red_time: 0, // calculated below
-    };
-  });
-
-  // Total cycle time = sum of all (green + yellow) phases
-  const totalCycle = timers.reduce((sum, t) => sum + t.green_time + t.yellow_time, 0);
-
-  // Red time for each direction = total cycle - own green - own yellow
-  for (const timer of timers) {
-    timer.red_time = totalCycle - timer.green_time - timer.yellow_time;
   }
 
-  return timers;
+  // Build results: red_time = total cycle − own green − own yellow
+  return roadsData.map((road, i) => ({
+    direction:  road.direction,
+    green_time: greenTimes[i],
+    yellow_time: YELLOW_TIME,
+    red_time:   TOTAL_CYCLE - greenTimes[i] - YELLOW_TIME,
+  }));
 }

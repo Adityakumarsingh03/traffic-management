@@ -13,77 +13,96 @@ const makeRoads = (pcuValues: number[]): RoadData[] => {
   }));
 };
 
-describe('calculateAdaptiveTimers', () => {
-  it('equal load on all 4 roads gives roughly equal green times', () => {
-    const roads = makeRoads([10, 10, 10, 10]);
-    const timers = calculateAdaptiveTimers(roads);
-    const greenTimes = timers.map((t) => t.green_time);
+// ── Constants that mirror densityService ──────────────────────────────────────
+const TOTAL_CYCLE  = 120;
+const YELLOW_TIME  = 5;
+const NUM_DIR      = 4;
+const AVAIL_GREEN  = TOTAL_CYCLE - NUM_DIR * YELLOW_TIME; // 100
+const MIN_GREEN    = 10;
+const MAX_GREEN    = AVAIL_GREEN - MIN_GREEN * (NUM_DIR - 1); // 70
 
-    // All green times should be equal
-    expect(greenTimes[0]).toBe(greenTimes[1]);
-    expect(greenTimes[1]).toBe(greenTimes[2]);
-    expect(greenTimes[2]).toBe(greenTimes[3]);
+describe('calculateAdaptiveTimers — strict 120s total cycle', () => {
+
+  it('total cycle is always exactly 120 s (equal load)', () => {
+    const timers = calculateAdaptiveTimers(makeRoads([10, 10, 10, 10]));
+    const total = timers.reduce((s, t) => s + t.green_time + t.yellow_time, 0);
+    expect(total).toBe(TOTAL_CYCLE);
   });
 
-  it('100% load on one road gives that road maximum green time', () => {
-    const roads = makeRoads([100, 0, 0, 0]);
-    const timers = calculateAdaptiveTimers(roads);
+  it('total cycle is always exactly 120 s (heavy one direction)', () => {
+    const timers = calculateAdaptiveTimers(makeRoads([100, 0, 0, 0]));
+    const total = timers.reduce((s, t) => s + t.green_time + t.yellow_time, 0);
+    expect(total).toBe(TOTAL_CYCLE);
+  });
 
-    const maxTimer = timers.find((t) => t.direction === 'N');
-    const otherTimers = timers.filter((t) => t.direction !== 'N');
+  it('total cycle is always exactly 120 s (zero PCU)', () => {
+    const timers = calculateAdaptiveTimers(makeRoads([0, 0, 0, 0]));
+    const total = timers.reduce((s, t) => s + t.green_time + t.yellow_time, 0);
+    expect(total).toBe(TOTAL_CYCLE);
+  });
 
-    expect(maxTimer).toBeDefined();
-    // The heavily loaded road should get more green time than others
-    for (const other of otherTimers) {
-      expect(maxTimer!.green_time).toBeGreaterThanOrEqual(other.green_time);
+  it('total cycle is always exactly 120 s (mixed load)', () => {
+    const timers = calculateAdaptiveTimers(makeRoads([50, 20, 10, 5]));
+    const total = timers.reduce((s, t) => s + t.green_time + t.yellow_time, 0);
+    expect(total).toBe(TOTAL_CYCLE);
+  });
+
+  it('equal load gives equal green times (25 s each)', () => {
+    const timers = calculateAdaptiveTimers(makeRoads([10, 10, 10, 10]));
+    for (const t of timers) {
+      expect(t.green_time).toBe(25);
     }
-    // Heavy road should be clamped to MAX_GREEN=120
-    expect(maxTimer!.green_time).toBe(120);
   });
 
-  it('all returned green times are between 10 and 120', () => {
-    const testCases = [
+  it('0 total PCU gives 25 s green to every direction', () => {
+    const timers = calculateAdaptiveTimers(makeRoads([0, 0, 0, 0]));
+    for (const t of timers) {
+      expect(t.green_time).toBe(25);
+    }
+  });
+
+  it('100% load on one direction clamps to MAX_GREEN (70 s)', () => {
+    const timers = calculateAdaptiveTimers(makeRoads([100, 0, 0, 0]));
+    const north  = timers.find((t) => t.direction === 'N')!;
+    expect(north.green_time).toBe(MAX_GREEN); // 70
+    // Others get MIN_GREEN (10) so total = 70+10+10+10 = 100 green ✓
+    const others = timers.filter((t) => t.direction !== 'N');
+    for (const t of others) {
+      expect(t.green_time).toBe(MIN_GREEN);
+    }
+  });
+
+  it('all green times are within [MIN_GREEN, MAX_GREEN]', () => {
+    const cases = [
       makeRoads([50, 20, 10, 5]),
       makeRoads([100, 0, 0, 0]),
       makeRoads([1, 1, 1, 1]),
       makeRoads([0, 0, 0, 0]),
     ];
-
-    for (const roads of testCases) {
-      const timers = calculateAdaptiveTimers(roads);
-      for (const timer of timers) {
-        expect(timer.green_time).toBeGreaterThanOrEqual(10);
-        expect(timer.green_time).toBeLessThanOrEqual(120);
+    for (const roads of cases) {
+      for (const t of calculateAdaptiveTimers(roads)) {
+        expect(t.green_time).toBeGreaterThanOrEqual(MIN_GREEN);
+        expect(t.green_time).toBeLessThanOrEqual(MAX_GREEN);
       }
     }
   });
 
-  it('0 total PCU gives 30s green to all directions', () => {
-    const roads = makeRoads([0, 0, 0, 0]);
-    const timers = calculateAdaptiveTimers(roads);
-
-    for (const timer of timers) {
-      expect(timer.green_time).toBe(30);
+  it('yellow time is always 5 s', () => {
+    for (const t of calculateAdaptiveTimers(makeRoads([10, 20, 15, 5]))) {
+      expect(t.yellow_time).toBe(YELLOW_TIME);
     }
   });
 
-  it('yellow time is always 5 seconds', () => {
-    const roads = makeRoads([10, 20, 15, 5]);
-    const timers = calculateAdaptiveTimers(roads);
-
-    for (const timer of timers) {
-      expect(timer.yellow_time).toBe(5);
+  it('red_time = TOTAL_CYCLE − green − yellow for every direction', () => {
+    for (const t of calculateAdaptiveTimers(makeRoads([10, 10, 10, 10]))) {
+      expect(t.red_time).toBe(TOTAL_CYCLE - t.green_time - t.yellow_time);
     }
   });
 
-  it('red time is correctly calculated from cycle time', () => {
-    const roads = makeRoads([10, 10, 10, 10]);
-    const timers = calculateAdaptiveTimers(roads);
-
-    const totalCycle = timers.reduce((sum, t) => sum + t.green_time + t.yellow_time, 0);
-
-    for (const timer of timers) {
-      expect(timer.red_time).toBe(totalCycle - timer.green_time - timer.yellow_time);
-    }
+  it('heavy direction gets proportionally more green than light direction', () => {
+    const timers = calculateAdaptiveTimers(makeRoads([80, 10, 5, 5]));
+    const north  = timers.find((t) => t.direction === 'N')!;
+    const south  = timers.find((t) => t.direction === 'S')!;
+    expect(north.green_time).toBeGreaterThan(south.green_time);
   });
 });
