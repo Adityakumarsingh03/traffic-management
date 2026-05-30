@@ -39,6 +39,22 @@ INDIAN_CLASS_MAP = {
     'stop sign':       None,
 }
 
+# ── Singular vehicle type → plural counts-dict key ───────────────────────────
+# Cannot use simple `vtype + 's'` because 'bus'+'s' = 'buss', not 'buses'.
+VTYPE_TO_COUNT_KEY: dict[str, str] = {
+    'car':           'cars',
+    'bike':          'bikes',
+    'bus':           'buses',        # ← irregular plural
+    'mini_truck':    'mini_trucks',
+    'medium_truck':  'medium_trucks',
+    'big_truck':     'big_trucks',
+    'cycle':         'cycles',
+    'auto_rickshaw': 'auto_rickshaws',
+    'e_rickshaw':    'e_rickshaws',
+    'tempo':         'tempos',
+    'tractor':       'tractors',
+}
+
 # ── PCU weights for Indian vehicles ──────────────────────────────────────────
 INDIAN_PCU_WEIGHTS = {
     'car':           1.0,
@@ -154,8 +170,8 @@ def detect_from_bytes(image_bytes: bytes) -> dict:
             if vtype is None:
                 continue
 
-            count_key = vtype + 's'
-            if count_key in counts:
+            count_key = VTYPE_TO_COUNT_KEY.get(vtype)
+            if count_key and count_key in counts:
                 counts[count_key] += 1
 
             pcu        = INDIAN_PCU_WEIGHTS.get(vtype, 1.0)
