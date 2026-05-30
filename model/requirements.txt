@@ -1,0 +1,10 @@
+ultralytics==8.2.0
+fastapi==0.111.0
+uvicorn==0.29.0
+python-multipart==0.0.9
+opencv-python-headless==4.9.0.80
+Pillow==10.3.0
+numpy==1.26.4
+requests==2.31.0
+roboflow==1.1.9
+huggingface-hub==0.20.3

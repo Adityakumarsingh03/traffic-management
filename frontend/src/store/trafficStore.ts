@@ -50,8 +50,16 @@ export const useTrafficStore = create<TrafficStore>((set) => ({
 
   submitVehicleCounts: async (id: number, roadsData: VehicleInput[]) => {
     try {
+      // Normalise optional Indian vehicle fields to 0 so the backend always receives them
+      const normalised = roadsData.map(r => ({
+        ...r,
+        auto_rickshaws: r.auto_rickshaws ?? 0,
+        e_rickshaws:    r.e_rickshaws    ?? 0,
+        tempos:         r.tempos         ?? 0,
+        tractors:       r.tractors       ?? 0,
+      }));
       const { data } = await axios.post(`${API_BASE}/junctions/${id}/vehicles`, {
-        roads: roadsData,
+        roads: normalised,
       });
 
       // Update selected junction with new timers

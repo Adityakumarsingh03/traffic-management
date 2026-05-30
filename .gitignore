@@ -11,3 +11,14 @@ backend/traffic.db
 Thumbs.db
 *.log
 npm-debug.log*
+
+# Model weights and training data (large binary files)
+model/weights/
+model/training_data/
+model/__pycache__/
+model/src/__pycache__/
+*.pt
+*.engine
+*.onnx
+runs/
+__pycache__/

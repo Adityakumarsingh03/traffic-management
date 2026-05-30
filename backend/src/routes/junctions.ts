@@ -10,6 +10,9 @@ import {
 
 const router = Router();
 
+/** Base URL for the Python model micro-service */
+const MODEL_API_URL = process.env.MODEL_API_URL || 'http://localhost:8000';
+
 // ── GET /api/junctions ────────────────────────────────────────────────────────
 router.get('/', (_req: Request, res: Response) => {
   try {
@@ -36,7 +39,7 @@ router.get('/', (_req: Request, res: Response) => {
         }
       }
 
-      const avgPcu = roadCount > 0 ? totalPcu / roadCount : 0;
+      const avgPcu  = roadCount > 0 ? totalPcu / roadCount : 0;
       const density = calculateDensity(avgPcu);
 
       return {
@@ -60,11 +63,13 @@ router.get('/', (_req: Request, res: Response) => {
 // ── GET /api/junctions/:id ────────────────────────────────────────────────────
 router.get('/:id', (req: Request, res: Response) => {
   try {
-    const db = getDb();
+    const db         = getDb();
     const junctionId = parseInt(req.params.id, 10);
 
     const junction = db.prepare('SELECT * FROM junctions WHERE id = :id')
-      .get({ id: junctionId }) as { id: number; name: string; lat: number; lng: number; description: string } | undefined;
+      .get({ id: junctionId }) as {
+        id: number; name: string; lat: number; lng: number; description: string
+      } | undefined;
 
     if (!junction) {
       res.status(404).json({ error: 'Junction not found' });
@@ -72,16 +77,18 @@ router.get('/:id', (req: Request, res: Response) => {
     }
 
     const roads = db.prepare('SELECT * FROM roads WHERE junction_id = :junction_id')
-      .all({ junction_id: junction.id }) as Array<{ id: number; junction_id: number; direction: string; road_name: string }>;
+      .all({ junction_id: junction.id }) as Array<{
+        id: number; junction_id: number; direction: string; road_name: string
+      }>;
 
-    const signalTimers = db.prepare('SELECT * FROM signal_timers WHERE junction_id = :junction_id')
-      .all({ junction_id: junction.id });
+    const signalTimers = db.prepare(
+      'SELECT * FROM signal_timers WHERE junction_id = :junction_id'
+    ).all({ junction_id: junction.id });
 
     const roadsWithCounts = roads.map((road) => {
       const latestCount = db.prepare(
         'SELECT * FROM vehicle_counts WHERE road_id = :road_id ORDER BY timestamp DESC LIMIT 1'
       ).get({ road_id: road.id });
-
       return { ...road, latest_count: latestCount || null };
     });
 
@@ -95,9 +102,10 @@ router.get('/:id', (req: Request, res: Response) => {
 // ── GET /api/junctions/:id/signals ───────────────────────────────────────────
 router.get('/:id/signals', (req: Request, res: Response) => {
   try {
-    const db = getDb();
-    const timers = db.prepare('SELECT * FROM signal_timers WHERE junction_id = :junction_id')
-      .all({ junction_id: parseInt(req.params.id, 10) });
+    const db     = getDb();
+    const timers = db.prepare(
+      'SELECT * FROM signal_timers WHERE junction_id = :junction_id'
+    ).all({ junction_id: parseInt(req.params.id, 10) });
     res.json(timers);
   } catch (err) {
     console.error(err);
@@ -108,12 +116,14 @@ router.get('/:id/signals', (req: Request, res: Response) => {
 // ── POST /api/junctions/:id/vehicles ─────────────────────────────────────────
 router.post('/:id/vehicles', (req: Request, res: Response) => {
   try {
-    const db = getDb();
+    const db         = getDb();
     const junctionId = parseInt(req.params.id, 10);
     const { roads: roadsInput } = req.body as {
       roads?: Array<{
-        direction: string; cars: number; bikes: number; buses: number;
+        direction: string;
+        cars: number; bikes: number; buses: number;
         mini_trucks: number; medium_trucks: number; big_trucks: number; cycles: number;
+        auto_rickshaws?: number; e_rickshaws?: number; tempos?: number; tractors?: number;
       }>;
     };
 
@@ -125,9 +135,17 @@ router.post('/:id/vehicles', (req: Request, res: Response) => {
     const timerInput = roadsInput.map((r) => ({
       direction: r.direction,
       vehicles: {
-        cars: r.cars || 0, bikes: r.bikes || 0, buses: r.buses || 0,
-        mini_trucks: r.mini_trucks || 0, medium_trucks: r.medium_trucks || 0,
-        big_trucks: r.big_trucks || 0, cycles: r.cycles || 0,
+        cars:           r.cars           || 0,
+        bikes:          r.bikes          || 0,
+        buses:          r.buses          || 0,
+        mini_trucks:    r.mini_trucks    || 0,
+        medium_trucks:  r.medium_trucks  || 0,
+        big_trucks:     r.big_trucks     || 0,
+        cycles:         r.cycles         || 0,
+        auto_rickshaws: r.auto_rickshaws || 0,
+        e_rickshaws:    r.e_rickshaws    || 0,
+        tempos:         r.tempos         || 0,
+        tractors:       r.tractors       || 0,
       } as VehicleCounts,
     }));
 
@@ -144,20 +162,32 @@ router.post('/:id/vehicles', (req: Request, res: Response) => {
         if (road) {
           db.prepare(`
             INSERT INTO vehicle_counts
-              (road_id, timestamp, cars, bikes, buses, mini_trucks, medium_trucks, big_trucks, cycles)
+              (road_id, timestamp,
+               cars, bikes, buses, mini_trucks, medium_trucks, big_trucks, cycles,
+               auto_rickshaws, e_rickshaws, tempos, tractors)
             VALUES
-              (:road_id, :timestamp, :cars, :bikes, :buses, :mini_trucks, :medium_trucks, :big_trucks, :cycles)
+              (:road_id, :timestamp,
+               :cars, :bikes, :buses, :mini_trucks, :medium_trucks, :big_trucks, :cycles,
+               :auto_rickshaws, :e_rickshaws, :tempos, :tractors)
           `).run({
-            road_id: road.id, timestamp,
-            cars: roadInput.cars || 0, bikes: roadInput.bikes || 0,
-            buses: roadInput.buses || 0, mini_trucks: roadInput.mini_trucks || 0,
-            medium_trucks: roadInput.medium_trucks || 0, big_trucks: roadInput.big_trucks || 0,
-            cycles: roadInput.cycles || 0,
+            road_id:        road.id,
+            timestamp,
+            cars:           roadInput.cars           || 0,
+            bikes:          roadInput.bikes          || 0,
+            buses:          roadInput.buses          || 0,
+            mini_trucks:    roadInput.mini_trucks    || 0,
+            medium_trucks:  roadInput.medium_trucks  || 0,
+            big_trucks:     roadInput.big_trucks     || 0,
+            cycles:         roadInput.cycles         || 0,
+            auto_rickshaws: roadInput.auto_rickshaws || 0,
+            e_rickshaws:    roadInput.e_rickshaws    || 0,
+            tempos:         roadInput.tempos         || 0,
+            tractors:       roadInput.tractors       || 0,
           });
         }
       }
 
-      // Replace timers
+      // Replace signal timers with freshly calculated ones
       db.prepare('DELETE FROM signal_timers WHERE junction_id = :junction_id')
         .run({ junction_id: junctionId });
 
@@ -168,11 +198,11 @@ router.post('/:id/vehicles', (req: Request, res: Response) => {
           VALUES (:junction_id, :direction, :green_time, :red_time, :yellow_time, :updated_at)
         `).run({
           junction_id: junctionId,
-          direction: timer.direction,
-          green_time: timer.green_time,
-          red_time: timer.red_time,
+          direction:   timer.direction,
+          green_time:  timer.green_time,
+          red_time:    timer.red_time,
           yellow_time: timer.yellow_time,
-          updated_at: now,
+          updated_at:  now,
         });
       }
     });
@@ -181,7 +211,7 @@ router.post('/:id/vehicles', (req: Request, res: Response) => {
 
     const congestion: Record<string, { density: number; level: string }> = {};
     for (const r of timerInput) {
-      const pcu = calculatePCU(r.vehicles);
+      const pcu     = calculatePCU(r.vehicles);
       const density = calculateDensity(pcu);
       congestion[r.direction] = { density, level: getCongestionLevel(density) };
     }
@@ -193,20 +223,81 @@ router.post('/:id/vehicles', (req: Request, res: Response) => {
   }
 });
 
+// ── POST /api/junctions/:id/detect ───────────────────────────────────────────
+// Forwards an image to the Python model service and returns detection results.
+// Also passes junction_id + direction so training data is saved per-junction.
+router.post('/:id/detect', async (req: Request, res: Response) => {
+  try {
+    const { image, direction } = req.body as { image: string; direction: string };
+    const junctionId           = req.params.id;
+
+    if (!image) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    const base64Data  = image.replace(/^data:image\/\w+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
+    const formData = new FormData();
+    const blob     = new Blob([imageBuffer], { type: 'image/jpeg' });
+    formData.append('file',              blob,       'road.jpg');
+    formData.append('junction_id',       junctionId);
+    formData.append('direction',         direction || 'unknown');
+    formData.append('save_for_training', 'true');
+
+    const modelRes = await fetch(`${MODEL_API_URL}/detect`, {
+      method: 'POST',
+      body:   formData as unknown as RequestInit['body'],
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!modelRes.ok) {
+      throw new Error(`Model API returned ${modelRes.status}`);
+    }
+
+    const result = await modelRes.json() as Record<string, unknown>;
+
+    return res.json({
+      success:              true,
+      direction,
+      counts:               result['counts'],
+      total_vehicles:       result['total_vehicles'],
+      total_pcu:            result['total_pcu'],
+      density:              result['density'],
+      congestion_level:     result['congestion_level'],
+      detections:           result['detections'],
+      annotated_image:      result['annotated_image'],
+      model_info:           result['model_info'],
+      training_data_saved:  result['training_data_saved'],
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Detection error:', msg);
+    return res.status(500).json({
+      success:  false,
+      error:    'Detection failed',
+      message:  msg,
+      fallback: 'Please enter vehicle counts manually',
+    });
+  }
+});
+
 // ── GET /api/junctions/:id/history ───────────────────────────────────────────
 router.get('/:id/history', (req: Request, res: Response) => {
   try {
-    const db = getDb();
+    const db         = getDb();
     const junctionId = parseInt(req.params.id, 10);
 
     const roads = db.prepare('SELECT * FROM roads WHERE junction_id = :junction_id')
-      .all({ junction_id: junctionId }) as Array<{ id: number; direction: string; road_name: string }>;
+      .all({ junction_id: junctionId }) as Array<{
+        id: number; direction: string; road_name: string
+      }>;
 
     const history = roads.map((road) => ({
-      road_id: road.id,
+      road_id:   road.id,
       direction: road.direction,
       road_name: road.road_name,
-      counts: db.prepare(
+      counts:    db.prepare(
         'SELECT * FROM vehicle_counts WHERE road_id = :road_id ORDER BY timestamp DESC LIMIT 10'
       ).all({ road_id: road.id }),
     }));

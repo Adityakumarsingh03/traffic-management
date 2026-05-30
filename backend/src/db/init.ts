@@ -169,6 +169,10 @@ function createSchema(): void {
       medium_trucks INTEGER DEFAULT 0,
       big_trucks INTEGER DEFAULT 0,
       cycles INTEGER DEFAULT 0,
+      auto_rickshaws INTEGER DEFAULT 0,
+      e_rickshaws INTEGER DEFAULT 0,
+      tempos INTEGER DEFAULT 0,
+      tractors INTEGER DEFAULT 0,
       FOREIGN KEY (road_id) REFERENCES roads(id)
     );
 
